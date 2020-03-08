@@ -55,7 +55,7 @@ public class ConnectFourServer extends Application {
 	private boolean bHostTurn;
 
 	//Consumer used to communicate between board/server
-	private Consumer<Integer> func;
+	private Consumer<Integer> comms_function;
 
 	//File paths for images
 	private static final String IMG_STARTSCREEN = "file:images/startScreen.png";
@@ -67,13 +67,14 @@ public class ConnectFourServer extends Application {
 	//Common Font
 	private static final String COMMON_FONT = "Century Gothic";
 
-	//Main Title
+	//Labels
 	private static final String TITLE = "Connect Four Hyper Ultimate Server";
+	private static final String WAITING = "Waiting for Connection...";
 	
 	//Helper to delay to End Game Screen
 	private int count = 0;
 
-	//Validations
+	//Validations and error messages
 	private static final int MIN_NAME_LENGTH = 2;
 	private static final int MAX_NAME_LENGTH = 30;
 	private static final String NO_ONE_LISTENING = "No connections to a client. No one is listening.";
@@ -81,22 +82,22 @@ public class ConnectFourServer extends Application {
 	@Override
 	public void start(Stage obStage) {
 		
-		this.func = ((x)->sendMessage(x));
-		this.mainBorderPane = new BorderPane();
-		
-		ds = new DropShadow();
+		this.comms_function = ((x)->sendMessage(x));								//Establish our function with the sendMessage method
+		this.mainBorderPane = new BorderPane();										//Set the main pane for the application
+
+		ds = new DropShadow();														//Build the dropshadow for the header label
 		ds.setColor(Color.WHITE);
 		ds.setRadius(5);
 		ds.setOffsetX(0);
 		ds.setOffsetY(0);
 
-		ImageView obStart = new ImageView(new Image(IMG_STARTSCREEN));
-		obStart.setFitHeight(850);
-		StackPane obStackStart = new StackPane();
+		ImageView ivStartScreen = new ImageView(new Image(IMG_STARTSCREEN));				//Set the start screen image and stylings
+		ivStartScreen.setFitHeight(850);
+		StackPane stackStart = new StackPane();												//Setup the stackpane for the start screen
 
-		hb = new HBox();
+		hb = new HBox();																	//Setup the styling for the header
 		hb.setAlignment(Pos.CENTER);
-		lblPlayer = new Label("Waiting for Connection");
+		lblPlayer = new Label(WAITING);
 		lblPlayer.setFont(Font.font(COMMON_FONT, FontWeight.BOLD,30));
 		lblPlayer.setEffect(ds);
 		hb.getChildren().add(lblPlayer);
@@ -116,14 +117,7 @@ public class ConnectFourServer extends Application {
 		
 		//Ensures names longer than MIN_NAME_LENGTH characters are entered
 		txtName.setOnKeyReleased(e-> {
-			if(txtName.getText().length() > MIN_NAME_LENGTH && txtName.getText().length() < MAX_NAME_LENGTH)
-			{
-				btnStart.setDisable(false);
-			}
-			else
-			{
-				btnStart.setDisable(true);
-			}
+				btnStart.setDisable(txtName.getText().length() > MIN_NAME_LENGTH && txtName.getText().length() < MAX_NAME_LENGTH);
 		});
 	
 		btnStart.setOnAction(e-> {
@@ -135,9 +129,9 @@ public class ConnectFourServer extends Application {
 		
 		obOpen.getChildren().addAll(lblName,txtName,btnStart);
 		
-		obStackStart.getChildren().addAll(obStart,obOpen);
+		stackStart.getChildren().addAll(ivStartScreen,obOpen);
 		
-		mainBorderPane.setCenter(obStackStart);
+		mainBorderPane.setCenter(stackStart);
 
 		Scene obScene = new Scene(mainBorderPane,700,850);
 	
@@ -148,7 +142,7 @@ public class ConnectFourServer extends Application {
 		obStage.getIcons().add(new Image(IMG_YELLOWCHIP));
 	}
 	
-	/*
+	/**
 	 * Sets up the GameBoard and the Chat Window
 	 * Sets up starting game conditions
 	 * Begins the GameOverCheck which determines when win
@@ -156,12 +150,12 @@ public class ConnectFourServer extends Application {
 	 */
 	public void makeGame()
 	{
-		gameBoard = new GameBoard(this.func);
-		this.gameBoard.setPlayer(1);
+		gameBoard = new GameBoard(this.comms_function);											//Make the gameboard, and send the function with it
+		this.gameBoard.setPlayer(1);															//Set initial variables
 		this.gameBoard.gameOver = false;
 		this.gameBoard.winner = false;
 		
-		ImageView obView = new ImageView(new Image(IMG_TOP_BANNER));
+		ImageView obView = new ImageView(new Image(IMG_TOP_BANNER));							//Set the stylings of the gameboard
 		StackPane obStackTop = new StackPane();
 		obStackTop.getChildren().addAll(obView,hb);
 		this.mainBorderPane.setCenter(gameBoard);
@@ -172,12 +166,15 @@ public class ConnectFourServer extends Application {
 		obStackBottom.getChildren().addAll(obViewBottom,this.chatPane);
 		mainBorderPane.setBottom(obStackBottom);
 		
-		this.chatPane.getSendButton().setOnAction(e-> sendChat() );
+		this.chatPane.getSendButton().setOnAction(e-> sendChat() );								//Handlers for send and clear buttons
 		this.chatPane.getClearButton().setOnAction(e-> this.chatPane.clearChat());
 
-		Platform.runLater(()->startGameOverCheck());
+		Platform.runLater(()->startGameOverCheck());											//Start the thread to watch for gameover flag
 	}
-	
+
+	/**
+	 * Initializes thread to set the server and comms protocols
+	 */
 	private void startGame()
 	{
 		Thread obThread = new Thread(()-> runGame());
@@ -197,21 +194,19 @@ public class ConnectFourServer extends Application {
 		
 		try
 		{
-			obServer = new ServerSocket(ConnectFourServer.GAME_PORT);
+			obServer = new ServerSocket(ConnectFourServer.GAME_PORT);					//Setup the server socket
+			obSock = obServer.accept();													//Wait for client to accept connection
 			
-			obSock = obServer.accept();
-			
-			this.dataInputStream = new DataInputStream(obSock.getInputStream());
+			this.dataInputStream = new DataInputStream(obSock.getInputStream());		//Set the IO streams
 			this.dataOutputStream = new DataOutputStream(obSock.getOutputStream());
 			
-			this.sClient = this.dataInputStream.readUTF();
-			this.dataOutputStream.writeUTF(this.sHost);
-			//Sets up the player turn order
-			estOrder();
+			this.sClient = this.dataInputStream.readUTF();								//Read in the clients name sent at time of connection
+			this.dataOutputStream.writeUTF(this.sHost);									//Send server's player name to client
+			estOrder();																	//Sets up the player turn order
 			
-			this.gameBoard.setTurn(this.bHostTurn);
-			
-			if(this.bHostTurn)
+			this.gameBoard.setTurn(this.bHostTurn);										//Set the gameboards aesthetics per turn order
+
+			if(this.bHostTurn)					//Set the styling of the gameboard depending on whose turn it is
 			{
 				myTurn();
 			}
@@ -222,42 +217,33 @@ public class ConnectFourServer extends Application {
 			
 			while(true)
 			{
-				sPrompt = this.dataInputStream.readUTF();
-				
-				//When opponent places a chip, the PLAY signal is sent by them
-				if(sPrompt.equals("PLAY"))
+				sPrompt = this.dataInputStream.readUTF();								//Read in messages from client
+
+				if(sPrompt.equals("PLAY"))												//When opponent places a chip, the PLAY signal is sent by them
 				{
-					int nCol = this.dataInputStream.readInt();
-					this.gameBoard.setOpposPos(nCol, 2);
-					this.gameBoard.setTurn(true);
-					myTurn();
+					int nCol = this.dataInputStream.readInt();							//Play gets followed by a column
+					this.gameBoard.setOpposPos(nCol, 2);						//Place the piece on the gameboard
+					this.gameBoard.setTurn(true);										//Server player's turn
+					myTurn();															//Set our turn
 				}
-				
-				//When a player hits the send button in the chat window
-				//MSG signal gets sent from them
-				if(sPrompt.equals("MSG"))
+
+				if(sPrompt.equals("MSG"))												//Send button in chat sends MSG signal
 				{
-					String sInp = this.dataInputStream.readUTF();
-					Platform.runLater(()->this.chatPane.getChatHist().appendText(sInp));
+					String sInp = this.dataInputStream.readUTF();						//Read in the input
+					Platform.runLater(()->this.chatPane.getChatHist().appendText(sInp));//Add the input to our chat window
 				}
 			}
 		}
-		catch(IOException exp)
-		{
-			exp.printStackTrace();
-		}
+		catch(IOException exp)	{	exp.printStackTrace();	}
 		finally
 		{
 			try
 			{
-				obSock.close();
-				dataInputStream.close();
-				dataOutputStream.close();
+				obSock.close();									//Close the socket when done
+				dataInputStream.close();						//Close input stream
+				dataOutputStream.close();						//Close output stream
 			}
-			catch(IOException exp)
-			{
-				exp.printStackTrace();
-			}
+			catch(IOException exp)	{	exp.printStackTrace();}
 		}
 	}
 	
@@ -266,34 +252,31 @@ public class ConnectFourServer extends Application {
 	 * String to the client, along with the chip position used
 	 * on the GameBoard, then switches its turn to false
 	 * 
-	 * @param nCol
+	 * @param nCol - Column player placed a chip into
 	 */
 	public void sendMessage(int nCol)
 	{
 		try
 		{
 			notMyTurn();
-			this.dataOutputStream.writeUTF("PLAY");
-			this.dataOutputStream.writeInt(nCol);
-			this.gameBoard.setTurn(false);
+			this.dataOutputStream.writeUTF("PLAY");			//Protocol message for client
+			this.dataOutputStream.writeInt(nCol);				//Send the column played to client
+			this.gameBoard.setTurn(false);						//No longer server's turn
 		}
-		catch(IOException e)
-		{
-			e.printStackTrace();
-		}
+		catch(IOException e) {e.printStackTrace();}
 	}
-	
-	/*
-	 * When it's this players turn, this updates
-	 * text string at the top of the window
+
+	/**
+	 * Updates the graphics and text content of the
+	 * header to indicate that it is player's turn
 	 */
 	private void myTurn()
 	{
-		Platform.runLater( () -> {
+		Platform.runLater( () ->
+		{
 			this.lblPlayer.setText("Your Turn");
-		lblPlayer.setTextFill(Color.GREEN);
-		ds.setColor(Color.GREEN);
-			
+			lblPlayer.setTextFill(Color.GREEN);
+			ds.setColor(Color.GREEN);
 		});
 	}
 	
@@ -303,39 +286,44 @@ public class ConnectFourServer extends Application {
 	 */
 	private void notMyTurn()
 	{
-		Platform.runLater( () -> {
+		Platform.runLater( () ->
+		{
 			this.lblPlayer.setText(sClient + "'s Turn");
-		lblPlayer.setTextFill(Color.RED);
-		ds.setColor(Color.RED);
+			lblPlayer.setTextFill(Color.RED);
+			ds.setColor(Color.RED);
 		});
 	}
 
 	/**
 	 * When the Send button in chat is activated, this method
 	 * sends the MSG string signal word, followed by the text
-	 * from the chat field, and appends the chat history
+	 * from the chat field, and appends the server's chat history
 	 */
 	public void sendChat()
 	{
 		try
 		{
-			String sMessage = this.sHost+": " +this.chatPane.getTextInput().getText()+"\n";
-			this.dataOutputStream.writeUTF("MSG");
-			this.dataOutputStream.writeUTF(sMessage);
-			Platform.runLater(()-> this.chatPane.getChatHist().appendText(sMessage));
-			Platform.runLater(()-> this.chatPane.getTextInput().clear());
+			String sMessage = this.sHost+": " +this.chatPane.getTextInput().getText()+"\n";		//Establish the message
+			this.dataOutputStream.writeUTF("MSG");											//Protocol MSG to indicate handling on Client end
+			this.dataOutputStream.writeUTF(sMessage);											//Send the message
+			Platform.runLater(()-> this.chatPane.getChatHist().appendText(sMessage));			//Append the message to server chat window
+			Platform.runLater(()-> this.chatPane.getTextInput().clear());						//Clear the input
 		}
 		catch(IOException e)
 		{
 			e.printStackTrace();
 		}
-		finally {
-			Platform.runLater(()-> this.chatPane.getChatHist().appendText(NO_ONE_LISTENING));
+		catch(NullPointerException npe)
+		{
+			Platform.runLater(()-> this.chatPane.getChatHist().appendText(NO_ONE_LISTENING));	//If not connected to a client, indicate messages
+			Platform.runLater(()-> this.chatPane.getTextInput().clear());						//are going no where
+			npe.printStackTrace();
 		}
 	}
-	
-	/*
-	 * Determines player starting order
+
+	/**
+	 * Establish player order at start of game
+	 * @throws IOException - If any issues on output
 	 */
 	private void estOrder() throws IOException
 	{
@@ -347,17 +335,22 @@ public class ConnectFourServer extends Application {
 		
 		this.dataOutputStream.writeBoolean(!bHostTurn);
 	}
-	
+
+	/**
+	 * Create a thread to watch for gameover flag
+	 */
 	private void startGameOverCheck()
 	{
 		Thread obThread = new Thread(()->runGameOverCheck());
 		obThread.setDaemon(true);
 		obThread.start();
 	}
-	
-	/*
-	 * Loops through to determine when the gameOver boolean is triggered
-	 * If true, transitions to a gameOverScreen after ~5 seconds
+
+	/**
+	 * Loop during gameplay to deteremine watch for the gameOver flag
+	 * to be set
+	 * Once set, the loop begins a 5 second counter (using a sleep)
+	 * before it transitions to GameOverScreen
 	 */
 	private void runGameOverCheck()
 	{
@@ -368,9 +361,9 @@ public class ConnectFourServer extends Application {
 				Platform.runLater( () -> {
 					if(gameBoard.gameOver)
 					{
-						count ++;
-						if(gameBoard.winner)
-						{
+						count ++;											//Once the flag is set, start incrementing the counter
+						if(gameBoard.winner)								//If the server player is a winner, set the styling and messaging
+						{													//appropriately
 							this.lblPlayer.setText("You Win!");
 							lblPlayer.setTextFill(Color.GREEN);
 							ds.setColor(Color.GREEN);
@@ -381,8 +374,8 @@ public class ConnectFourServer extends Application {
 							lblPlayer.setTextFill(Color.RED);
 							ds.setColor(Color.RED);
 						}
-						if(count == 9)
-						{
+						if(count == 9)										//Once the counter reaches 9th step (5 seconds)
+						{													//transition to gameOverScreen
 							Platform.runLater(() -> gameOverScreen());
 						}
 					}
@@ -397,28 +390,29 @@ public class ConnectFourServer extends Application {
 	}
 	
 	/**
-	 * Sets up the end game screen
+	 * Sets up the end game screen after someone wins the game
 	 */
 	private void gameOverScreen()
 	{
-		StackPane obEndPane = new StackPane();
-		ImageView obGameOver = new ImageView(new Image(IMG_ENDSCREEN));
-		Button btnExit = new Button("Exit Game");
-		btnExit.setFont(Font.font(COMMON_FONT, FontWeight.BOLD, 15));
-		btnExit.setOnAction(e-> System.exit(0));
+		StackPane obEndPane = new StackPane();								//Create the stackpane for the screen
+		ImageView obGameOver = new ImageView(new Image(IMG_ENDSCREEN));		//Setup the background image
+		Button btnExit = new Button("Exit Game");						//Add the exit button
+		btnExit.setFont(Font.font(COMMON_FONT, FontWeight.BOLD, 15));	//Set the button styling and text
 		btnExit.setPadding(new Insets(25));
 		btnExit.setAlignment(Pos.BOTTOM_CENTER);
-		HBox obH = new HBox();
-		obH.setAlignment(Pos.BOTTOM_CENTER);
+		btnExit.setOnAction(e-> System.exit(0));						//Click handler on the button to exit the program
+		HBox obH = new HBox();												//Horizontal layout for the button
+		obH.setAlignment(Pos.BOTTOM_CENTER);								//Set the styling for the HBox
 		obH.setPadding(new Insets(175));
-		obH.getChildren().add(btnExit);
-		obEndPane.getChildren().addAll(obGameOver,obH);
+		obH.getChildren().add(btnExit);										//Add the button to the HBox
+		obEndPane.getChildren().addAll(obGameOver,obH);						//Add the imageview and HBox to the stackpane
 		
-		mainBorderPane.setCenter(obEndPane);
+		mainBorderPane.setCenter(obEndPane);								//Set the stackpane to the main display screen
 	}
 
-	public static void main(String[] args) {
-
-		Application.launch(args);
-	}
+	/**
+	 * Main method to run the server
+	 * @param args - UNUSED
+	 */
+	public static void main(String[] args) {Application.launch(args);}
 }
