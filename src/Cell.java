@@ -1,18 +1,18 @@
-/**
- * COSC 190 Assign 4
- * Logan Olfert CST130
- * Matt Smith CST143
- * 
+/*
+ * COSC190 Assign 4
+ * Logan Olfert
+ * Matt Smith
+ * April 2019
  */
 
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 
-/*
- * Represents the "space" on the GameBoard
- * that can be played into
- */
 
+/**
+ * This class represents a 'space' on the GameBoard that a piece
+ * can be played into.
+ */
 public class Cell
 {
 	private ImageView iv;

@@ -1,8 +1,8 @@
-/**
- * COSC 190 Assign 4
- * Logan Olfert CST130
- * Matt Smith CST143
- * 
+/*
+ * COSC190 Assign 4
+ * Logan Olfert
+ * Matt Smith
+ * April 2019
  */
 
 import java.util.function.Consumer;
@@ -25,23 +25,39 @@ public class GameBoard extends Pane
 	private ImageView imgRed2;
 	
 	//Height and width of the board
-	private final int w = 700;
-	private final int h = 600;
-	
+	private static final int w = 700;
+	private static final int h = 600;
+
+	//Board action variables
 	private boolean bMyTurn;
 	private boolean canPlace;
 	private int nPlayer;
-	
+
+	//Game state variables
 	public boolean winner = false;
 	public boolean gameOver = false;
-	
+
+	//Function used for comms
 	Consumer<Integer> func;
+
+	//Image files
+	private static final String IMG_BOARD = "file:images/board.png";
+	private static final String IMG_NO_CHIP = "file:images/nochip.png";
+	//These images have opacity filter applied outside of the 'chip'
+	private static final String IMG_YELLOW = "file:images/yellowchip.png";
+	private static final String IMG_RED = "file:images/redchip.png";
+	//These images have a 'solid' area applied outside of the chip to allow clicking on them
+	private static final String IMG_YELLOW_STATIC = "file:images/yellowchip2.png";
+	private static final String IMG_RED_STATIC = "file:images/redchip2.png";
+
+
+
 	
 	public GameBoard(Consumer<Integer> func)
 	{
 		super();
 		this.func=func;
-		ImageView obRect = new ImageView("file:images/board.png");
+		ImageView obRect = new ImageView(IMG_BOARD);
 		obRect.setFitWidth(w);
 		obRect.setFitHeight(h);
 		this.getChildren().add(obRect);
@@ -63,24 +79,23 @@ public class GameBoard extends Pane
 	{
 		this.gameIV = new ImageView[7][6];
 		this.GameCells = new Cell[7][6];
-		
-		
+
 		//imgRed and imgYellow have a chip image with transparent backgrounds
-		this.imgYellow = new ImageView("file:images/yellowchip.png");
-		this.imgRed = new ImageView("file:images/redchip.png");
+		this.imgYellow = new ImageView(IMG_YELLOW);
+		this.imgRed = new ImageView(IMG_RED);
 		
 		//imgRed2 and imgYellow2 have a chip image with a black background at 1% opacity
 		//which makes the players able to click anywhere in the 100x100 square as opposed
 		//to just being able to click on the circle
-		this.imgYellow2 = new ImageView("file:images/yellowchip2.png");
-		this.imgRed2 = new ImageView("file:images/redchip2.png");
+		this.imgYellow2 = new ImageView(IMG_YELLOW_STATIC);
+		this.imgRed2 = new ImageView(IMG_RED_STATIC);
 		
 		for(int i=0; i<this.gameIV.length; i++)
 		{
 			for(int j=0; j<this.gameIV[0].length; j++)
 			{
 				//nochip.png is basically just a blank image
-				ImageView current = new ImageView("file:images/nochip.png");
+				ImageView current = new ImageView(IMG_NO_CHIP);
 				current.setOpacity(0.01);
 				Cell obCell = new Cell(current, i, j, (i*100), (j*100));
 				obCell.getIv().setFitWidth(100);

@@ -1,8 +1,8 @@
 /*
- * COSC 190 Assign 4
- * Logan Olfert CST130
- * Matt Smith CST143
- * 
+ * COSC190 Assign 4
+ * Logan Olfert
+ * Matt Smith
+ * April 2019
  */
 
 import java.io.DataInputStream;
@@ -202,7 +202,6 @@ public class ConnectFourClient extends Application {
 				if(sPrompt.equals("PLAY"))
 				{
 					int nCol = this.obIn.readInt();
-					//System.out.printf("Received %d\n", nCol);
 					this.obBoard.setOpposPos(nCol, 1);
 					this.obBoard.setTurn(true);
 					myTurn();

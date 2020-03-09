@@ -2,7 +2,7 @@
  * COSC190 Assign 4
  * Logan Olfert
  * Matt Smith
- * 
+ * April 2019
  */
 
 import java.io.DataInputStream;
