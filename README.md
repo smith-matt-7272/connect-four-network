@@ -13,3 +13,7 @@ Once cleanup and documentation done, created server and client as runnable jar f
 # Notes on use:
 Server must be open for connections first (enter the name and hit start) before client
 
+# Screenshots
+
+![Welcome Screen](images/screenshot-1.png)
+![Game play](images/screenshot-2.png)
